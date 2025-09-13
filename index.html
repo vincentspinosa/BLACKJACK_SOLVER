@@ -457,6 +457,7 @@
                 players.forEach((p, i) => { 
                     const betAmount = getBetAmount(counter, gameRules.minBet, gameRules.maxBet, p.bankroll);
                     p.bets[0] = betAmount; 
+                    p.bankroll -= betAmount; // <--- FIX: Subtract the bet from the bankroll here
                     if (i === 0) { // Show bet recommendation only for the first player
                         recommendationText.textContent = `The AI recommends to bet ${betAmount}`;
                     }
@@ -566,18 +567,32 @@
                 const dealerHand = dealer.hands[0];
                 const dealerValue = dealerHand.isBust() ? 0 : dealerHand.getValue();
                 players.forEach(player => {
-                    let totalWinnings = 0;
+                    let totalPayout = 0; // Changed variable name for clarity
                     player.hands.forEach((hand, index) => {
                         const bet = player.bets[index];
-                        if (hand.status === 'surrendered') { totalWinnings -= bet / 2; return; }
+                        if (hand.status === 'surrendered') { 
+                            totalPayout += bet / 2; // Player gets half their bet back
+                            return; 
+                        }
+                        
                         const playerValue = hand.isBust() ? 0 : hand.getValue();
-                        if (hand.isBlackjack() && !dealerHand.isBlackjack()) { totalWinnings += bet * 1.5; hand.status = "WIN (BJ)"; } 
-                        else if (playerValue > 0 && (dealerValue === 0 || playerValue > dealerValue)) { totalWinnings += bet; hand.status = "WIN"; } 
-                        else if (playerValue > 0 && playerValue < dealerValue || (playerValue > 0 && dealerHand.isBlackjack())) { totalWinnings -= bet; hand.status = "LOSE"; } 
-                        else if (playerValue > 0 && playerValue === dealerValue) { hand.status = "PUSH"; } 
-                        else if (playerValue === 0) { totalWinnings -= bet; }
+
+                        if (hand.isBlackjack() && !dealerHand.isBlackjack()) {
+                            totalPayout += bet * 2.5; // Original bet back + 1.5x winnings
+                            hand.status = "WIN (BJ)";
+                        } else if (playerValue > 0 && (dealerValue === 0 || playerValue > dealerValue)) {
+                            totalPayout += bet * 2; // Original bet back + 1x winnings
+                            hand.status = "WIN";
+                        } else if (playerValue > 0 && playerValue === dealerValue && !dealerHand.isBlackjack()) {
+                            totalPayout += bet; // Push: Original bet is returned
+                            hand.status = "PUSH";
+                        } else {
+                            // Loss: Player gets nothing back, so we add 0 to the payout.
+                            // This covers busts, losing to dealer, and losing to dealer blackjack.
+                            hand.status = "LOSE";
+                        }
                     });
-                    player.bankroll += totalWinnings;
+                    player.bankroll += totalPayout;
                 });
                 currentActionText.textContent = 'Bets settled. Click "Start Next Hand" to play again.';
                 nextHandBtn.style.display = 'inline-block';
