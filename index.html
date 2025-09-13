@@ -26,10 +26,29 @@
         #dealer-area, .player-card, #game-info, #input-controls, #ai-recommendation, #user-actions, #setup-screen {
             border: 1px solid #334b46; padding: 15px; border-radius: 8px; background-color: #2c3e3a;
         }
-        .player-card { margin-bottom: 20px; }
+        .player-card { margin-bottom: 20px; min-height: 180px; }
         #setup-screen { max-width: 500px; margin: 50px auto; display: flex; flex-direction: column; gap: 10px;}
         .player-card.active-player { border-color: #2ecc71; box-shadow: 0 0 15px rgba(46, 204, 113, 0.6); }
         .player-bet-recommendation { color: #f1c40f; font-weight: bold; text-align: center; margin-bottom: 10px; }
+        
+        /* --- NEW STYLES FOR EMPTY SEATS --- */
+        .player-card.empty-seat {
+            background-color: #253532;
+            text-align: center;
+            border-style: dashed;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .add-player-btn {
+            background-color: #3498db;
+            margin-top: 10px;
+        }
+        .add-player-btn:hover {
+            background-color: #5dade2;
+        }
+        /* --- END NEW STYLES --- */
 
         /* Buttons and Inputs */
         button { padding: 10px 15px; border: none; background-color: #27ae60; color: white; border-radius: 5px; cursor: pointer; margin: 5px; font-weight: bold; }
@@ -71,7 +90,7 @@
     <div id="setup-screen">
         <h2>Game Setup</h2>
         <div class="setup-option">
-            <label for="num-players">Number of Players (1-7):</label>
+            <label for="num-players">Number of Player Spots (1-7):</label>
             <input type="number" id="num-players" min="1" max="7" value="1">
         </div>
         <div class="setup-option">
@@ -344,6 +363,7 @@
             const cardsRemainingSpan = document.getElementById('cards-remaining');
             const cardPickerGrid = document.getElementById('card-picker-grid');
 
+            // 'players' array now represents seats at the table. A seat can be a Player object or null.
             let players = [], dealer = new Player('Dealer'), counter, gameState = 'SETUP';
             let currentPlayerIndex = 0, currentHandIndex = 0, dealingQueue = [];
             let gameRules = {};
@@ -351,6 +371,30 @@
             startGameBtn.addEventListener('click', initializeGame);
             nextHandBtn.addEventListener('click', startNewHand);
             userActionButtons.forEach(button => button.addEventListener('click', e => handleActionButtonClick(e.target.dataset.move)));
+            
+            // --- NEW: Event listener for adding players to empty seats ---
+            playersArea.addEventListener('click', (event) => {
+                if (event.target.classList.contains('add-player-btn')) {
+                    // Only allow adding players between hands
+                    if (gameState !== 'SETTLEMENT' && gameState !== 'BETTING') {
+                        alert("You can only add new players between hands.");
+                        return;
+                    }
+                    const seatIndex = parseInt(event.target.dataset.seatIndex, 10);
+                    addNewPlayer(seatIndex);
+                }
+            });
+
+            // --- NEW: Function to add a player to an empty seat ---
+            function addNewPlayer(seatIndex) {
+                const initialBankroll = parseInt(document.getElementById('initial-bankroll').value, 10) || 1000;
+                // Player ID is based on the seat number for consistency
+                players[seatIndex] = new Player(`Player ${seatIndex + 1}`, initialBankroll);
+                
+                // Redraw UI to show the new player
+                createPlayerUI();
+                updateUI();
+            }
 
             function initializeGame() {
                 const numPlayers = parseInt(document.getElementById('num-players').value, 10);
@@ -457,11 +501,13 @@
             function startNewHand() {
                 gameState = 'BETTING';
                 nextHandBtn.style.display = 'none'; insurancePrompt.style.display = 'none';
-                players.forEach(p => p.reset()); dealer.reset();
+                players.forEach(p => { if (p) p.reset(); }); // MODIFIED: Check for null player
+                dealer.reset();
                 createPlayerUI();
                 recommendationText.textContent = '---';
 
                 players.forEach((p, i) => { 
+                    if (!p) return; // MODIFIED: Skip empty seats
                     const betAmount = getBetAmount(counter, gameRules.minBet, gameRules.maxBet, p.bankroll);
                     p.bets[0] = betAmount; 
                     p.bankroll -= betAmount;
@@ -478,9 +524,10 @@
 
             function buildDealingQueue() {
                 dealingQueue = [];
-                players.forEach((p, i) => dealingQueue.push({ playerIndex: i, handIndex: 0, message: `Deal first card to Player ${i + 1}` }));
+                // MODIFIED: Loop checks for null players before adding to queue
+                players.forEach((p, i) => { if (p) dealingQueue.push({ playerIndex: i, handIndex: 0, message: `Deal first card to Player ${i + 1}` }); });
                 dealingQueue.push({ isDealer: true, message: `Deal dealer's UP card` });
-                players.forEach((p, i) => dealingQueue.push({ playerIndex: i, handIndex: 0, message: `Deal second card to Player ${i + 1}` }));
+                players.forEach((p, i) => { if (p) dealingQueue.push({ playerIndex: i, handIndex: 0, message: `Deal second card to Player ${i + 1}` }); });
             }
 
             function processDealingQueue() {
@@ -501,7 +548,13 @@
             }
 
             function startPlayerTurn() {
+                // MODIFIED: Skip over empty seats to find the next active player.
+                while(currentPlayerIndex < players.length && !players[currentPlayerIndex]) {
+                    currentPlayerIndex++;
+                }
+
                 if (currentPlayerIndex >= players.length) { startDealerTurn(); return; }
+                
                 gameState = 'PLAYER_TURN';
                 const player = players[currentPlayerIndex];
                 const hand = player.hands[currentHandIndex];
@@ -525,8 +578,7 @@
                 recommendationText.textContent = `AI recommends: ${move}`;
                 currentActionText.textContent = `Player ${currentPlayerIndex + 1}, Hand ${currentHandIndex + 1}: Waiting for user action.`;
             }
-
-            // --- BUG FIX: This function is rewritten to correctly handle advancing turns after a split ---
+            
             function advanceTurn() {
                 const player = players[currentPlayerIndex];
                 if (!player) { 
@@ -534,18 +586,15 @@
                     return; 
                 }
 
-                // Find if there is ANY active hand left for the current player.
                 const nextActiveHandIndex = player.hands.findIndex(hand => hand.status === 'active');
 
                 if (nextActiveHandIndex !== -1) {
-                    // If yes, switch to that hand and continue the turn.
                     currentHandIndex = nextActiveHandIndex;
                     startPlayerTurn();
                 } else {
-                    // If no, this player's turn is over. Move to the next player.
                     currentPlayerIndex++;
                     currentHandIndex = 0;
-                    startPlayerTurn(); // This will either start the next player's turn or the dealer's turn.
+                    startPlayerTurn(); 
                 }
             }
 
@@ -579,10 +628,13 @@
                 gameState = 'SETTLEMENT';
                 const dealerHand = dealer.hands[0];
                 const dealerValue = dealerHand.isBust() ? 0 : dealerHand.getValue();
-                players.forEach(player => {
+                
+                players.forEach((player, index) => {
+                    if (!player) return; // MODIFIED: Skip empty seats
+
                     let totalPayout = 0;
-                    player.hands.forEach((hand, index) => {
-                        const bet = player.bets[index];
+                    player.hands.forEach((hand, hIndex) => {
+                        const bet = player.bets[hIndex];
                         if (hand.status === 'surrendered') { totalPayout += bet / 2; return; }
                         const playerValue = hand.isBust() ? 0 : hand.getValue();
                         if (hand.isBlackjack() && !dealerHand.isBlackjack()) { totalPayout += bet * 2.5; hand.status = "WIN (BJ)"; }
@@ -591,22 +643,44 @@
                         else { hand.status = "LOSE"; }
                     });
                     player.bankroll += totalPayout;
+
+                    // --- NEW: If player bankroll is 0, remove them from the seat ---
+                    if (player.bankroll <= 0) {
+                        console.log(`Player ${player.id} has busted out.`);
+                        players[index] = null; // Set the seat to empty
+                    }
                 });
-                currentActionText.textContent = 'Bets settled. Click "Start Next Hand" to play again.';
+
+                currentActionText.textContent = 'Bets settled. Empty seats are now open.';
                 nextHandBtn.style.display = 'inline-block';
+                
+                // MODIFIED: Rebuild player UI to show empty seats, then update data for remaining players
+                createPlayerUI();
                 updateUI();
             }
             
+            // MODIFIED: Now handles creating player cards AND empty seat cards.
             function createPlayerUI() {
                 playersArea.innerHTML = '';
-                players.forEach(player => {
+                players.forEach((player, index) => {
                     const playerDiv = document.createElement('div');
                     playerDiv.className = 'player-card';
-                    playerDiv.id = `player-${player.id.replace(' ', '-')}`;
-                    playerDiv.innerHTML = `<h3>${player.id}</h3><div class="player-bet-recommendation"></div><div class="player-hands-container"></div><p>Bankroll: <span class="player-bankroll">${Math.round(player.bankroll)}</span></p>`;
+
+                    if (player) {
+                        playerDiv.id = `player-${player.id.replace(' ', '-')}`;
+                        playerDiv.innerHTML = `<h3>${player.id}</h3><div class="player-bet-recommendation"></div><div class="player-hands-container"></div><p>Bankroll: <span class="player-bankroll">${Math.round(player.bankroll)}</span></p>`;
+                    } else {
+                        playerDiv.classList.add('empty-seat');
+                        playerDiv.id = `seat-${index}`;
+                        playerDiv.innerHTML = `
+                            <h3>Seat ${index + 1} (Empty)</h3>
+                            <button class="add-player-btn" data-seat-index="${index}">Add New Player</button>
+                        `;
+                    }
                     playersArea.appendChild(playerDiv);
                 });
             }
+
 
             function updateUI() {
                 updateInfo();
@@ -614,6 +688,7 @@
                 document.querySelector('#dealer-area #dealer-cards').innerHTML = dealer.hands[0].cards.map(c => `<span class="card">${c.rank}</span>`).join(' ');
                 
                 players.forEach((player, pIndex) => {
+                    if (!player) return; // MODIFIED: Skip empty seats
                     const playerDiv = document.getElementById(`player-${player.id.replace(' ', '-')}`);
                     if (!playerDiv) return;
                     playerDiv.classList.toggle('active-player', pIndex === currentPlayerIndex && (gameState === 'PLAYER_TURN' || gameState === 'DEALING'));
@@ -629,7 +704,7 @@
                         <div class="hand ${isActiveHand ? 'active-hand' : ''} ${isPlayable ? 'playable' : ''}" 
                              data-p-index="${pIndex}" data-h-index="${hIndex}">
                             <div>${hand.cards.map(c => `<span class="card">${c.rank}</span>`).join(' ')}</div>
-                            <p>Bet: ${player.bets[hIndex]} | Val: ${hand.getValue()} | Status: ${hand.status}</p>
+                            <p>Bet: ${player.bets[hIndex]} | Val: ${hand.getValue()} | Status: <span class="player-status">${hand.status}</span></p>
                         </div>`;
                     }).join('');
 
