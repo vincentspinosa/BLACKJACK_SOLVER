@@ -20,6 +20,10 @@ Full Game Rule Customization: Set the number of decks, dealer rules (S17/H17), s
 
 Flexible Multi-Hand & Split Handling: Accurately handles complex scenarios, allowing you to split multiple times and play your hands in any order you choose.
 
+Insurance Guidance: When the dealer shows an Ace, the application will display a clear on-screen message advising whether or not to take insurance based on the current true count.
+
+Dynamic Player Seats: Simulate a real table experience. If a player's bankroll is depleted after a hand, their seat will become empty. A new player can then join the game by being added to that open spot before the next hand begins.
+
 Manual Card Input: You are in complete control. You tell the program which cards are dealt, making it a perfect tool for practicing with a real deck.
 
 Zero Installation: Simply download the .html file and open it in any modern web browser.
