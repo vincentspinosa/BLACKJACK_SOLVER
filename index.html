@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blackjack AI Solver - Standalone Version</title>
+    <title>Blackjack AI Solver</title>
     
-    <!-- All CSS is now embedded directly in the HTML file -->
-    <style>
+     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #1e2d2b; color: #f0f0f0; line-height: 1.6; }
         h1, h2, h3 { color: #2ecc71; text-align: center; margin-bottom: 20px; }
         #game-screen { display: grid; grid-template-columns: 2fr 3fr 2fr; gap: 20px; max-width: 1600px; margin: 20px auto; align-items: start; }
@@ -18,18 +17,17 @@
         #dealer-area, .player-card, #game-info, #input-controls, #ai-recommendation, #user-actions, .donation-section, #setup-screen {
             border: 1px solid #334b46; padding: 15px; border-radius: 8px; background-color: #2c3e3a;
         }
-        #setup-screen { max-width: 500px; margin: 50px auto; }
+        #setup-screen { max-width: 500px; margin: 50px auto; display: flex; flex-direction: column; gap: 10px;}
         .player-card.active-player { border-color: #2ecc71; box-shadow: 0 0 15px rgba(46, 204, 113, 0.6); }
 
         /* Buttons and Inputs */
         button { padding: 10px 15px; border: none; background-color: #27ae60; color: white; border-radius: 5px; cursor: pointer; margin: 5px; font-weight: bold; }
         button:hover { background-color: #2ecc71; }
         button:disabled { background-color: #555; cursor: not-allowed; }
-        select, input { padding: 8px; margin: 5px; background-color: #1e2d2b; color: #f0f0f0; border: 1px solid #334b46; border-radius: 5px; }
+        select, input[type="number"], input[type="text"] { padding: 8px; margin: 5px; background-color: #1e2d2b; color: #f0f0f0; border: 1px solid #334b46; border-radius: 5px; }
         #next-hand-btn { background-color: #3498db; }
         #next-hand-btn:hover { background-color: #5dade2; }
-        #cancel-last-action-btn { background-color: #e74c3c; }
-        #cancel-last-action-btn:hover { background-color: #c0392b; }
+        .setup-option { display: flex; justify-content: space-between; align-items: center; }
 
         /* Card Styles */
         .card { display: inline-block; width: 40px; height: 60px; line-height: 60px; text-align: center; padding: 10px; border: 1px solid #f0f0f0; border-radius: 6px; margin: 4px; font-weight: bold; background-color: #fff; color: #1e2d2b; font-size: 1.2em; }
@@ -37,7 +35,7 @@
         .hand { padding: 10px; border: 2px solid transparent; border-radius: 5px; min-width: 150px; }
         .hand.active-hand { border-color: #3498db; background-color: #334b46; }
 
-        /* New Card Picker Styles */
+        /* Card Picker Styles */
         #card-picker-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
         .card-picker-card {
             height: 50px; line-height: 50px;
@@ -56,14 +54,34 @@
     </style>
 </head>
 <body>
-    <h1>Blackjack AI Solver (Basic Strategy + Hi-Lo Count)</h1>
+    <h1>Blackjack AI Solver by Vincent Spinosa</h1>
 
     <div id="setup-screen">
         <h2>Game Setup</h2>
-        <label for="num-players">Number of Players (1-7):</label>
-        <input type="number" id="num-players" min="1" max="7" value="1">
-        <label for="num-decks">Number of Decks (1-8):</label>
-        <input type="number" id="num-decks" min="1" max="8" value="6">
+        <div class="setup-option">
+            <label for="num-players">Number of Players (1-7):</label>
+            <input type="number" id="num-players" min="1" max="7" value="1">
+        </div>
+        <div class="setup-option">
+            <label for="num-decks">Number of Decks (1-8):</label>
+            <input type="number" id="num-decks" min="1" max="8" value="6">
+        </div>
+        <div class="setup-option">
+            <label for="initial-bankroll">Initial Bankroll:</label>
+            <input type="number" id="initial-bankroll" min="1" value="1000">
+        </div>
+        <div class="setup-option">
+            <label for="min-bet">Minimum Bet:</label>
+            <input type="number" id="min-bet" min="1" value="10">
+        </div>
+        <div class="setup-option">
+            <label for="max-bet">Maximum Bet:</label>
+            <input type="number" id="max-bet" min="1" placeholder="No limit">
+        </div>
+        <div class="setup-option">
+            <label for="allow-surrender">Allow Surrender:</label>
+            <input type="checkbox" id="allow-surrender" checked>
+        </div>
         <button id="start-game-btn">Start Game</button>
     </div>
 
@@ -76,8 +94,7 @@
                 <p><b>Cards Seen:</b> <span id="cards-remaining">0</span></p>
             </div>
             <div id="players-area">
-                <!-- Player sections will be generated here by JS -->
-            </div>
+                </div>
         </div>
 
         <div class="game-column">
@@ -105,7 +122,6 @@
                 </div>
                 <div>
                     <button id="next-hand-btn" style="display:none;">Start Next Hand</button>
-                    <button id="cancel-last-action-btn" disabled>Cancel Last Action</button>
                 </div>
             </div>
         </div>
@@ -121,7 +137,7 @@
     <div class="donation-section">
         <h3>Support This Tool</h3>
         <p>If you find this solver useful, consider a donation.</p>
-        <p><strong>Bitcoin (BTC):</strong> `bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh`</p>
+        <p><strong>Bitcoin (BTC):</strong> bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh</p>
     </div>
 
     <script type="module">
@@ -200,12 +216,6 @@
                 const decksRemaining = (this.totalCards - this.cardsSeen) / 52;
                 return decksRemaining > 0 ? this.runningCount / decksRemaining : 0;
             }
-            clone() {
-                const newCounter = new HiLoCounter(this.numDecks);
-                newCounter.runningCount = this.runningCount;
-                newCounter.cardsSeen = this.cardsSeen;
-                return newCounter;
-            }
         }
         
         // ========================================================================
@@ -255,7 +265,7 @@
             '2': [P, P, P, P, P, P, H, H, H, H],
         };
 
-        function getRecommendedMove(playerHand, dealerUpCard, counter) {
+        function getRecommendedMove(playerHand, dealerUpCard, counter, gameRules) {
             const playerValue = playerHand.getValue();
             const dealerValue = dealerUpCard.value;
             const trueCount = counter.getTrueCount();
@@ -267,23 +277,25 @@
 
             // --- Basic Strategy Lookup ---
             const dealerIndex = dealerValue === 11 ? 9 : dealerValue - 2;
+            let move;
 
             if (playerHand.isPair()) {
                 const cardRank = playerHand.cards[0].rank;
-                const move = pairs[cardRank][dealerIndex];
+                move = pairs[cardRank][dealerIndex];
                 if (move === D && playerHand.cards.length > 2) return H; // Can't double after split hit
-                return move;
-            }
-            if (playerHand.isSoft()) {
-                const move = softTotals[playerValue][dealerIndex];
+            } else if (playerHand.isSoft()) {
+                move = softTotals[playerValue][dealerIndex];
                  if (move === D && playerHand.cards.length > 2) return H; // Can't double after hit
-                return move;
+            } else {
+                // Hard totals
+                if (playerValue <= 8) return H;
+                move = hardTotals[playerValue][dealerIndex];
             }
-            // Hard totals
-            if (playerValue <= 8) return H;
-            const move = hardTotals[playerValue][dealerIndex];
+            
+            // Apply game rules (Surrender, Double)
             if (move === D && playerHand.cards.length > 2) return H; // Can't double after hit
-            if (move === R && playerHand.cards.length > 2) return H; // Can't surrender after hit
+            if (move === R && (!gameRules.surrenderAllowed || playerHand.cards.length > 2)) return H; // Can't surrender if not allowed or after a hit
+            
             return move;
         }
 
@@ -291,12 +303,14 @@
             return counter.getTrueCount() >= 3;
         }
 
-        function getBetAmount(counter, minBet, bankroll) {
+        function getBetAmount(counter, minBet, maxBet, bankroll) {
             const trueCount = counter.getTrueCount();
             let betUnits = 1;
             if (trueCount >= 2) betUnits = Math.floor(trueCount);
-            const bet = betUnits * minBet;
-            return Math.min(bet, bankroll / 4); // Simple bet spread, don't bet more than 1/4 bankroll
+            const calculatedBet = betUnits * minBet;
+            // Bet should not exceed maxBet, a quarter of the bankroll, and must be at least minBet
+            const finalBet = Math.min(calculatedBet, maxBet, bankroll / 4);
+            return Math.max(finalBet, minBet);
         }
 
         // ========================================================================
@@ -319,57 +333,34 @@
             const infoValue2 = document.getElementById('info-value-2');
             const cardsRemainingSpan = document.getElementById('cards-remaining');
             const cardPickerGrid = document.getElementById('card-picker-grid');
-            const cancelBtn = document.getElementById('cancel-last-action-btn');
 
             let players = [], dealer = new Player('Dealer'), counter, gameState = 'SETUP';
             let currentPlayerIndex = 0, currentHandIndex = 0, dealingQueue = [];
-            let lastState = null;
-
-            function saveState(action, cardDealt = null) {
-                lastState = {
-                    players: JSON.parse(JSON.stringify(players)),
-                    dealer: JSON.parse(JSON.stringify(dealer)),
-                    counter: counter.clone(),
-                    gameState, currentPlayerIndex, currentHandIndex, dealingQueue: [...dealingQueue],
-                    lastAction: action,
-                    cardDealt: cardDealt
-                };
-            }
-            
-            function restoreState() {
-                if (!lastState) return;
-                players = JSON.parse(JSON.stringify(lastState.players));
-                dealer = JSON.parse(JSON.stringify(lastState.dealer));
-                counter = lastState.counter;
-                gameState = lastState.gameState;
-                currentPlayerIndex = lastState.currentPlayerIndex;
-                currentHandIndex = lastState.currentHandIndex;
-                dealingQueue = [...lastState.dealingQueue];
-                
-                if (lastState.lastAction === 'deal' && lastState.cardDealt) {
-                     // This part is simplified, a full undo would need more state.
-                     // For now, we just go back to the previous game state.
-                }
-
-                if(gameState === 'DEALING') processDealingQueue();
-                else if (gameState === 'PLAYER_TURN') startPlayerTurn();
-                else if (gameState === 'BETTING') startNewHand();
-
-                lastState = null;
-                updateUI();
-            }
+            let gameRules = {};
 
             startGameBtn.addEventListener('click', initializeGame);
             nextHandBtn.addEventListener('click', startNewHand);
-            cancelBtn.addEventListener('click', restoreState);
             userActionButtons.forEach(button => button.addEventListener('click', e => handleActionButtonClick(e.target.dataset.move)));
 
             function initializeGame() {
+                // Read settings from the form
                 const numPlayers = parseInt(document.getElementById('num-players').value, 10);
                 const numDecks = parseInt(document.getElementById('num-decks').value, 10);
+                const initialBankroll = parseInt(document.getElementById('initial-bankroll').value, 10);
+                const minBet = parseInt(document.getElementById('min-bet').value, 10);
+                const maxBetInput = document.getElementById('max-bet').value;
+                const maxBet = maxBetInput ? parseInt(maxBetInput, 10) : Infinity;
+                const surrenderAllowed = document.getElementById('allow-surrender').checked;
+                
+                gameRules = { minBet, maxBet, surrenderAllowed };
+
                 counter = new HiLoCounter(numDecks);
-                players = Array.from({ length: numPlayers }, (_, i) => new Player(`Player ${i + 1}`));
+                players = Array.from({ length: numPlayers }, (_, i) => new Player(`Player ${i + 1}`, initialBankroll));
                 dealer = new Player('Dealer');
+                
+                // Toggle Surrender button visibility based on rules
+                document.querySelector('[data-move="SURRENDER"]').style.display = gameRules.surrenderAllowed ? 'inline-block' : 'none';
+
                 setupScreen.style.display = 'none';
                 gameScreen.style.display = 'grid';
                 createCardPicker();
@@ -390,7 +381,6 @@
 
             function handleCardPickerClick(rank) {
                 const cardToDeal = new Card('♠', rank); // Suit is arbitrary, only rank matters for count/value
-                saveState('deal', cardToDeal);
                 counter.countCard(cardToDeal);
                 if (gameState === 'DEALING') {
                     const dealInfo = dealingQueue.shift();
@@ -416,11 +406,9 @@
                 const hand = player.hands[currentHandIndex];
                 if (!hand) return;
                 
-                saveState('action');
                 switch (move) {
                     case 'HIT':
                         currentActionText.textContent = `Player hits. Please select the card that was dealt.`;
-                        lastState = null;
                         break;
                     case 'STAND': hand.status = 'stand'; advanceTurn(); break;
                     case 'DOUBLE':
@@ -440,20 +428,20 @@
                         processDealingQueue();
                         break;
                     case 'SURRENDER':
-                        if (hand.cards.length === 2) { hand.status = 'surrendered'; advanceTurn(); } 
-                        else { recommendationText.textContent = "Cannot surrender after hitting."; lastState = null; }
+                        if (hand.cards.length === 2 && gameRules.surrenderAllowed) { hand.status = 'surrendered'; advanceTurn(); } 
+                        else { recommendationText.textContent = "Cannot surrender now."; }
                         break;
                 }
                 updateUI();
             }
 
             function startNewHand() {
-                gameState = 'BETTING'; lastState = null;
+                gameState = 'BETTING';
                 nextHandBtn.style.display = 'none'; insurancePrompt.style.display = 'none';
                 players.forEach(p => p.reset()); dealer.reset();
                 createPlayerUI();
                 players.forEach((p, i) => { 
-                    const betAmount = getBetAmount(counter, 10, p.bankroll);
+                    const betAmount = getBetAmount(counter, gameRules.minBet, gameRules.maxBet, p.bankroll);
                     p.bets[0] = betAmount; 
                     if (i === 0) { // Show bet recommendation only for the first player
                         recommendationText.textContent = `The AI recommends to bet ${betAmount}`;
@@ -511,7 +499,7 @@
 
                 updateUI();
                 setTimeout(() => {
-                    const move = getRecommendedMove(hand, dealer.hands[0].cards[0], counter);
+                    const move = getRecommendedMove(hand, dealer.hands[0].cards[0], counter, gameRules);
                     recommendationText.textContent = `AI recommends: ${move}`;
                     currentActionText.textContent = `Player ${currentPlayerIndex + 1}, Hand ${currentHandIndex + 1}: Waiting for user action.`;
                 }, 50);
@@ -579,7 +567,6 @@
 
             function updateUI() {
                 updateInfo();
-                cancelBtn.disabled = !lastState;
                 document.getElementById('dealer-value').textContent = dealer.hands[0].getValue();
                 document.querySelector('#dealer-area #dealer-cards').innerHTML = dealer.hands[0].cards.map(c => `<span class="card">${c.rank}</span>`).join(' ');
                 
@@ -620,4 +607,3 @@
     </script>
 </body>
 </html>
-
