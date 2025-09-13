@@ -29,6 +29,9 @@
         .player-card { margin-bottom: 20px; }
         #setup-screen { max-width: 500px; margin: 50px auto; display: flex; flex-direction: column; gap: 10px;}
         .player-card.active-player { border-color: #2ecc71; box-shadow: 0 0 15px rgba(46, 204, 113, 0.6); }
+        
+        /* MODIFICATION 1: Added CSS for the new element */
+        .player-bet-recommendation { color: #f1c40f; font-weight: bold; text-align: center; margin-bottom: 10px; }
 
         /* Buttons and Inputs */
         button { padding: 10px 15px; border: none; background-color: #27ae60; color: white; border-radius: 5px; cursor: pointer; margin: 5px; font-weight: bold; }
@@ -450,17 +453,28 @@
                 updateUI();
             }
 
+            // MODIFICATION 3: Updated function to display bet recommendation for each player
             function startNewHand() {
                 gameState = 'BETTING';
-                nextHandBtn.style.display = 'none'; insurancePrompt.style.display = 'none';
-                players.forEach(p => p.reset()); dealer.reset();
-                createPlayerUI();
+                nextHandBtn.style.display = 'none'; 
+                insurancePrompt.style.display = 'none';
+                players.forEach(p => p.reset()); 
+                dealer.reset();
+                createPlayerUI(); // Creates the player cards first
+                recommendationText.textContent = '---'; // Clear the central recommendation area
+
                 players.forEach((p, i) => { 
                     const betAmount = getBetAmount(counter, gameRules.minBet, gameRules.maxBet, p.bankroll);
                     p.bets[0] = betAmount; 
-                    p.bankroll -= betAmount; // <--- FIX: Subtract the bet from the bankroll here
-                    if (i === 0) { // Show bet recommendation only for the first player
-                        recommendationText.textContent = `The AI recommends to bet ${betAmount}`;
+                    p.bankroll -= betAmount;
+
+                    // Find the player's specific card and update their recommendation
+                    const playerCard = document.getElementById(`player-${p.id.replace(' ', '-')}`);
+                    if (playerCard) {
+                        const recElement = playerCard.querySelector('.player-bet-recommendation');
+                        if (recElement) {
+                            recElement.textContent = `AI Recommended Bet: ${betAmount}`;
+                        }
                     }
                 });
                 buildDealingQueue();
@@ -480,10 +494,7 @@
                     gameState = 'DEALING';
                     const msg = dealingQueue[0].message;
                     currentActionText.textContent = msg;
-                    // Prepend bet recommendation to the first dealing message
-                    if (msg.includes("Deal first card to Player 1")) {
-                         recommendationText.textContent = `The AI recommends to bet ${players[0].bets[0]}`;
-                    }
+                    // MODIFICATION 4: Removed the old, redundant block that set the central recommendation
                     updateUI();
                 } else { postDealCheck(); }
             }
@@ -606,7 +617,8 @@
                     const playerDiv = document.createElement('div');
                     playerDiv.className = 'player-card';
                     playerDiv.id = `player-${player.id.replace(' ', '-')}`;
-                    playerDiv.innerHTML = `<h3>${player.id}</h3><div class="player-hands-container"></div><p>Bankroll: <span class="player-bankroll">${Math.round(player.bankroll)}</span></p>`;
+                    // MODIFICATION 2: Added a div to hold the player-specific recommendation
+                    playerDiv.innerHTML = `<h3>${player.id}</h3><div class="player-bet-recommendation"></div><div class="player-hands-container"></div><p>Bankroll: <span class="player-bankroll">${Math.round(player.bankroll)}</span></p>`;
                     playersArea.appendChild(playerDiv);
                 });
             }
