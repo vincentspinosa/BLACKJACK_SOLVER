@@ -29,8 +29,6 @@
         .player-card { margin-bottom: 20px; }
         #setup-screen { max-width: 500px; margin: 50px auto; display: flex; flex-direction: column; gap: 10px;}
         .player-card.active-player { border-color: #2ecc71; box-shadow: 0 0 15px rgba(46, 204, 113, 0.6); }
-        
-        /* MODIFICATION 1: Added CSS for the new element */
         .player-bet-recommendation { color: #f1c40f; font-weight: bold; text-align: center; margin-bottom: 10px; }
 
         /* Buttons and Inputs */
@@ -46,6 +44,9 @@
         .card { display: inline-block; width: 40px; height: 60px; line-height: 60px; text-align: center; padding: 10px; border: 1px solid #f0f0f0; border-radius: 6px; margin: 4px; font-weight: bold; background-color: #fff; color: #1e2d2b; font-size: 1.2em; }
         .player-hands-container { display: flex; flex-wrap: wrap; gap: 15px; }
         .hand { padding: 10px; border: 2px solid transparent; border-radius: 5px; min-width: 150px; }
+        
+        .hand.playable { cursor: pointer; border-color: #555; }
+        .hand.playable:hover { background-color: #3f5b56; }
         .hand.active-hand { border-color: #3498db; background-color: #334b46; }
 
         /* Card Picker Styles */
@@ -282,6 +283,8 @@
             const dealerValue = dealerUpCard.value;
             const trueCount = counter.getTrueCount();
             
+            if (playerValue >= 21) return S; // No move needed if 21 or bust
+
             // --- Hi-Lo Deviations (Illustrious 18) ---
             if (dealerValue === 10 && playerValue === 16 && trueCount >= 0) return S;
             if (dealerValue === 10 && playerValue === 15 && trueCount >= 4) return S;
@@ -320,7 +323,6 @@
             let betUnits = 1;
             if (trueCount >= 2) betUnits = Math.floor(trueCount);
             const calculatedBet = betUnits * minBet;
-            // Bet should not exceed maxBet, a quarter of the bankroll, and must be at least minBet
             const finalBet = Math.min(calculatedBet, maxBet, bankroll / 4);
             return Math.max(finalBet, minBet);
         }
@@ -339,10 +341,6 @@
             const userActionButtons = document.querySelectorAll('.action-btn');
             const insurancePrompt = document.getElementById('insurance-prompt');
             const insuranceRecommendation = document.getElementById('insurance-recommendation');
-            const infoLabel1 = document.getElementById('info-label-1');
-            const infoValue1 = document.getElementById('info-value-1');
-            const infoLabel2 = document.getElementById('info-label-2');
-            const infoValue2 = document.getElementById('info-value-2');
             const cardsRemainingSpan = document.getElementById('cards-remaining');
             const cardPickerGrid = document.getElementById('card-picker-grid');
 
@@ -355,30 +353,24 @@
             userActionButtons.forEach(button => button.addEventListener('click', e => handleActionButtonClick(e.target.dataset.move)));
 
             function initializeGame() {
-                // Read settings from the form
                 const numPlayers = parseInt(document.getElementById('num-players').value, 10);
                 const numDecks = parseInt(document.getElementById('num-decks').value, 10);
                 const initialBankroll = parseInt(document.getElementById('initial-bankroll').value, 10);
                 const minBet = parseInt(document.getElementById('min-bet').value, 10);
                 const maxBetInput = document.getElementById('max-bet').value;
                 const maxBet = maxBetInput ? parseInt(maxBetInput, 10) : Infinity;
-                const surrenderAllowed = document.getElementById('allow-surrender').checked;
-                const soft17Rule = document.getElementById('soft-17-rule').value;
                 
                 gameRules = { 
-                    minBet, 
-                    maxBet, 
-                    surrenderAllowed, 
-                    dealerHitsOnSoft17: soft17Rule === 'hit' 
+                    minBet, maxBet, 
+                    surrenderAllowed: document.getElementById('allow-surrender').checked, 
+                    dealerHitsOnSoft17: document.getElementById('soft-17-rule').value === 'hit' 
                 };
 
                 counter = new HiLoCounter(numDecks);
                 players = Array.from({ length: numPlayers }, (_, i) => new Player(`Player ${i + 1}`, initialBankroll));
                 dealer = new Player('Dealer');
                 
-                // Toggle Surrender button visibility based on rules
                 document.querySelector('[data-move="SURRENDER"]').style.display = gameRules.surrenderAllowed ? 'inline-block' : 'none';
-
                 setupScreen.style.display = 'none';
                 gameScreen.style.display = 'grid';
                 createCardPicker();
@@ -397,8 +389,22 @@
                 });
             }
 
+            function handleHandClick(event) {
+                const handEl = event.currentTarget;
+                const pIndex = parseInt(handEl.dataset.pIndex, 10);
+                const hIndex = parseInt(handEl.dataset.hIndex, 10);
+
+                if (pIndex !== currentPlayerIndex || gameState !== 'PLAYER_TURN') return;
+                
+                const hand = players[pIndex].hands[hIndex];
+                if (hand.status !== 'active') return; 
+
+                currentHandIndex = hIndex;
+                startPlayerTurn();
+            }
+
             function handleCardPickerClick(rank) {
-                const cardToDeal = new Card('♠', rank); // Suit is arbitrary, only rank matters for count/value
+                const cardToDeal = new Card('♠', rank);
                 counter.countCard(cardToDeal);
                 if (gameState === 'DEALING') {
                     const dealInfo = dealingQueue.shift();
@@ -426,24 +432,19 @@
                 
                 switch (move) {
                     case 'HIT':
-                        currentActionText.textContent = `Player hits. Please select the card that was dealt.`;
+                        currentActionText.textContent = `Player hits on Hand ${currentHandIndex + 1}. Select dealt card.`;
                         break;
                     case 'STAND': hand.status = 'stand'; advanceTurn(); break;
                     case 'DOUBLE':
                         player.bankroll -= player.bets[currentHandIndex];
                         player.bets[currentHandIndex] *= 2;
                         hand.status = 'doubled';
-                        currentActionText.textContent = `Player doubled. Deal ONE card.`;
+                        currentActionText.textContent = `Player doubled on Hand ${currentHandIndex + 1}. Deal ONE card.`;
                         break;
                     case 'SPLIT':
                         player.bankroll -= player.bets[currentHandIndex];
                         player.splitHand(currentHandIndex);
-                        createPlayerUI();
-                        dealingQueue.unshift(
-                            { playerIndex: currentPlayerIndex, handIndex: player.hands.length - 1, message: `Deal card to Player ${currentPlayerIndex + 1}'s new hand`},
-                            { playerIndex: currentPlayerIndex, handIndex: currentHandIndex, message: `Deal card to Player ${currentPlayerIndex + 1}'s first hand`}
-                        );
-                        processDealingQueue();
+                        startPlayerTurn();
                         break;
                     case 'SURRENDER':
                         if (hand.cards.length === 2 && gameRules.surrenderAllowed) { hand.status = 'surrendered'; advanceTurn(); } 
@@ -453,28 +454,21 @@
                 updateUI();
             }
 
-            // MODIFICATION 3: Updated function to display bet recommendation for each player
             function startNewHand() {
                 gameState = 'BETTING';
-                nextHandBtn.style.display = 'none'; 
-                insurancePrompt.style.display = 'none';
-                players.forEach(p => p.reset()); 
-                dealer.reset();
-                createPlayerUI(); // Creates the player cards first
-                recommendationText.textContent = '---'; // Clear the central recommendation area
+                nextHandBtn.style.display = 'none'; insurancePrompt.style.display = 'none';
+                players.forEach(p => p.reset()); dealer.reset();
+                createPlayerUI();
+                recommendationText.textContent = '---';
 
                 players.forEach((p, i) => { 
                     const betAmount = getBetAmount(counter, gameRules.minBet, gameRules.maxBet, p.bankroll);
                     p.bets[0] = betAmount; 
                     p.bankroll -= betAmount;
-
-                    // Find the player's specific card and update their recommendation
                     const playerCard = document.getElementById(`player-${p.id.replace(' ', '-')}`);
-                    if (playerCard) {
+                    if(playerCard) {
                         const recElement = playerCard.querySelector('.player-bet-recommendation');
-                        if (recElement) {
-                            recElement.textContent = `AI Recommended Bet: ${betAmount}`;
-                        }
+                        if (recElement) recElement.textContent = `AI Recommended Bet: ${betAmount}`;
                     }
                 });
                 buildDealingQueue();
@@ -492,9 +486,7 @@
             function processDealingQueue() {
                 if (dealingQueue.length > 0) {
                     gameState = 'DEALING';
-                    const msg = dealingQueue[0].message;
-                    currentActionText.textContent = msg;
-                    // MODIFICATION 4: Removed the old, redundant block that set the central recommendation
+                    currentActionText.textContent = dealingQueue[0].message;
                     updateUI();
                 } else { postDealCheck(); }
             }
@@ -513,30 +505,48 @@
                 gameState = 'PLAYER_TURN';
                 const player = players[currentPlayerIndex];
                 const hand = player.hands[currentHandIndex];
-                if(!hand) { advanceTurn(); return; }
-                if (hand.cards.length === 1) { processDealingQueue(); return; } // For splits
+                
+                updateUI(); 
+
+                if(!hand || hand.status !== 'active') { advanceTurn(); return; }
+                
+                if (hand.cards.length === 1) { 
+                    currentActionText.textContent = `Player ${currentPlayerIndex + 1}, Hand ${currentHandIndex + 1}: Please deal a card.`;
+                    return;
+                }
+                
                 if (hand.getValue() >= 21) {
                     if (hand.isBlackjack()) hand.status = 'blackjack';
+                    else if (hand.isBust()) hand.status = 'bust';
                     advanceTurn(); return;
                 }
                 
-                if (recommendationText.textContent.startsWith("The AI recommends to bet")) {
-                    recommendationText.textContent = 'Calculating...';
-                }
-
-                updateUI();
-                setTimeout(() => {
-                    const move = getRecommendedMove(hand, dealer.hands[0].cards[0], counter, gameRules);
-                    recommendationText.textContent = `AI recommends: ${move}`;
-                    currentActionText.textContent = `Player ${currentPlayerIndex + 1}, Hand ${currentHandIndex + 1}: Waiting for user action.`;
-                }, 50);
+                const move = getRecommendedMove(hand, dealer.hands[0].cards[0], counter, gameRules);
+                recommendationText.textContent = `AI recommends: ${move}`;
+                currentActionText.textContent = `Player ${currentPlayerIndex + 1}, Hand ${currentHandIndex + 1}: Waiting for user action.`;
             }
 
+            // --- BUG FIX: This function is rewritten to correctly handle advancing turns after a split ---
             function advanceTurn() {
                 const player = players[currentPlayerIndex];
-                if (currentHandIndex < player.hands.length - 1) { currentHandIndex++; } 
-                else { currentPlayerIndex++; currentHandIndex = 0; }
-                startPlayerTurn();
+                if (!player) { 
+                    startDealerTurn(); 
+                    return; 
+                }
+
+                // Find if there is ANY active hand left for the current player.
+                const nextActiveHandIndex = player.hands.findIndex(hand => hand.status === 'active');
+
+                if (nextActiveHandIndex !== -1) {
+                    // If yes, switch to that hand and continue the turn.
+                    currentHandIndex = nextActiveHandIndex;
+                    startPlayerTurn();
+                } else {
+                    // If no, this player's turn is over. Move to the next player.
+                    currentPlayerIndex++;
+                    currentHandIndex = 0;
+                    startPlayerTurn(); // This will either start the next player's turn or the dealer's turn.
+                }
             }
 
             function startDealerTurn() {
@@ -547,19 +557,10 @@
                 } else {
                     const dealerHand = dealer.hands[0];
                     const dealerValue = dealerHand.getValue();
-
-                    // Determine if the dealer should stand based on the game rules
                     let dealerStands = false;
-                    if (dealerValue > 17) {
+                    if (dealerValue > 17 || (dealerValue === 17 && !dealerHand.isSoft()) || (dealerValue === 17 && dealerHand.isSoft() && !gameRules.dealerHitsOnSoft17)) {
                         dealerStands = true;
-                    } else if (dealerValue === 17) {
-                        // If it's a hard 17, dealer always stands.
-                        // If it's a soft 17, it depends on the game rule.
-                        if (!dealerHand.isSoft() || (dealerHand.isSoft() && !gameRules.dealerHitsOnSoft17)) {
-                             dealerStands = true;
-                        }
                     }
-                    // Dealer never stands on 16 or less.
 
                     if (dealerHand.isBlackjack()) {
                         currentActionText.textContent = `Dealer has Blackjack.`;
@@ -579,30 +580,15 @@
                 const dealerHand = dealer.hands[0];
                 const dealerValue = dealerHand.isBust() ? 0 : dealerHand.getValue();
                 players.forEach(player => {
-                    let totalPayout = 0; // Changed variable name for clarity
+                    let totalPayout = 0;
                     player.hands.forEach((hand, index) => {
                         const bet = player.bets[index];
-                        if (hand.status === 'surrendered') { 
-                            totalPayout += bet / 2; // Player gets half their bet back
-                            return; 
-                        }
-                        
+                        if (hand.status === 'surrendered') { totalPayout += bet / 2; return; }
                         const playerValue = hand.isBust() ? 0 : hand.getValue();
-
-                        if (hand.isBlackjack() && !dealerHand.isBlackjack()) {
-                            totalPayout += bet * 2.5; // Original bet back + 1.5x winnings
-                            hand.status = "WIN (BJ)";
-                        } else if (playerValue > 0 && (dealerValue === 0 || playerValue > dealerValue)) {
-                            totalPayout += bet * 2; // Original bet back + 1x winnings
-                            hand.status = "WIN";
-                        } else if (playerValue > 0 && playerValue === dealerValue && !dealerHand.isBlackjack()) {
-                            totalPayout += bet; // Push: Original bet is returned
-                            hand.status = "PUSH";
-                        } else {
-                            // Loss: Player gets nothing back, so we add 0 to the payout.
-                            // This covers busts, losing to dealer, and losing to dealer blackjack.
-                            hand.status = "LOSE";
-                        }
+                        if (hand.isBlackjack() && !dealerHand.isBlackjack()) { totalPayout += bet * 2.5; hand.status = "WIN (BJ)"; }
+                        else if (playerValue > 0 && (dealerValue === 0 || playerValue > dealerValue)) { totalPayout += bet * 2; hand.status = "WIN"; }
+                        else if (playerValue > 0 && playerValue === dealerValue && !dealerHand.isBlackjack()) { totalPayout += bet; hand.status = "PUSH"; }
+                        else { hand.status = "LOSE"; }
                     });
                     player.bankroll += totalPayout;
                 });
@@ -617,7 +603,6 @@
                     const playerDiv = document.createElement('div');
                     playerDiv.className = 'player-card';
                     playerDiv.id = `player-${player.id.replace(' ', '-')}`;
-                    // MODIFICATION 2: Added a div to hold the player-specific recommendation
                     playerDiv.innerHTML = `<h3>${player.id}</h3><div class="player-bet-recommendation"></div><div class="player-hands-container"></div><p>Bankroll: <span class="player-bankroll">${Math.round(player.bankroll)}</span></p>`;
                     playersArea.appendChild(playerDiv);
                 });
@@ -628,37 +613,36 @@
                 document.getElementById('dealer-value').textContent = dealer.hands[0].getValue();
                 document.querySelector('#dealer-area #dealer-cards').innerHTML = dealer.hands[0].cards.map(c => `<span class="card">${c.rank}</span>`).join(' ');
                 
-                const rankCounts = {};
-                for(const rank of RANKS) {
-                    const key = ['J','Q','K'].includes(rank) ? '10' : rank;
-                    rankCounts[key] = (rankCounts[key] || 0) + (counter.numDecks * 4);
-                }
-
-                document.querySelectorAll('.card-picker-card').forEach(el => {
-                    // This is a simplified disable logic without a full tracker
-                    // A more robust implementation would track exact cards
-                });
-
                 players.forEach((player, pIndex) => {
                     const playerDiv = document.getElementById(`player-${player.id.replace(' ', '-')}`);
                     if (!playerDiv) return;
                     playerDiv.classList.toggle('active-player', pIndex === currentPlayerIndex && (gameState === 'PLAYER_TURN' || gameState === 'DEALING'));
                     playerDiv.querySelector('.player-bankroll').textContent = Math.round(player.bankroll);
                     const handsContainer = playerDiv.querySelector('.player-hands-container');
-                    handsContainer.innerHTML = player.hands.map((hand, hIndex) => `
-                        <div class="hand ${hIndex === currentHandIndex && pIndex === currentPlayerIndex && gameState === 'PLAYER_TURN' ? 'active-hand' : ''}">
+
+                    handsContainer.innerHTML = player.hands.map((hand, hIndex) => {
+                        const isPlayerTurn = pIndex === currentPlayerIndex && gameState === 'PLAYER_TURN';
+                        const isPlayable = isPlayerTurn && hand.status === 'active';
+                        const isActiveHand = isPlayable && hIndex === currentHandIndex;
+
+                        return `
+                        <div class="hand ${isActiveHand ? 'active-hand' : ''} ${isPlayable ? 'playable' : ''}" 
+                             data-p-index="${pIndex}" data-h-index="${hIndex}">
                             <div>${hand.cards.map(c => `<span class="card">${c.rank}</span>`).join(' ')}</div>
                             <p>Bet: ${player.bets[hIndex]} | Val: ${hand.getValue()} | Status: ${hand.status}</p>
-                        </div>`).join('');
+                        </div>`;
+                    }).join('');
+
+                    handsContainer.querySelectorAll('.hand.playable').forEach(handEl => {
+                        handEl.addEventListener('click', handleHandClick);
+                    });
                 });
             }
 
             function updateInfo() {
                 if (!counter) return;
-                infoLabel1.textContent = "Running Count:";
-                infoValue1.textContent = counter.runningCount;
-                infoLabel2.textContent = "True Count:";
-                infoValue2.textContent = counter.getTrueCount().toFixed(1);
+                document.getElementById('info-value-1').textContent = counter.runningCount;
+                document.getElementById('info-value-2').textContent = counter.getTrueCount().toFixed(1);
                 cardsRemainingSpan.textContent = counter.cardsSeen;
             }
         });
