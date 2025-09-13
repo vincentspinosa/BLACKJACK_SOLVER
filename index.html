@@ -31,7 +31,7 @@
         .player-card.active-player { border-color: #2ecc71; box-shadow: 0 0 15px rgba(46, 204, 113, 0.6); }
         .player-bet-recommendation { color: #f1c40f; font-weight: bold; text-align: center; margin-bottom: 10px; }
         
-        /* --- NEW STYLES FOR EMPTY SEATS --- */
+        /* --- STYLES FOR EMPTY SEATS --- */
         .player-card.empty-seat {
             background-color: #253532;
             text-align: center;
@@ -48,7 +48,7 @@
         .add-player-btn:hover {
             background-color: #5dade2;
         }
-        /* --- END NEW STYLES --- */
+        /* --- END STYLES --- */
 
         /* Buttons and Inputs */
         button { padding: 10px 15px; border: none; background-color: #27ae60; color: white; border-radius: 5px; cursor: pointer; margin: 5px; font-weight: bold; }
@@ -255,92 +255,63 @@
         // ========================================================================
         const H = 'HIT', S = 'STAND', D = 'DOUBLE', P = 'SPLIT', R = 'SURRENDER';
         
-        // Dealer card (2-A) is the key. Player hand is the index.
         const hardTotals = {
         //   2  3  4  5  6  7  8  9  10 A
-            20: [S, S, S, S, S, S, S, S, S, S],
-            19: [S, S, S, S, S, S, S, S, S, S],
-            18: [S, S, S, S, S, S, S, S, S, S],
-            17: [S, S, S, S, S, S, S, S, S, S],
-            16: [S, S, S, S, S, H, H, R, R, R],
-            15: [S, S, S, S, S, H, H, H, R, H],
-            14: [S, S, S, S, S, H, H, H, H, H],
-            13: [S, S, S, S, S, H, H, H, H, H],
-            12: [H, H, S, S, S, H, H, H, H, H],
-            11: [D, D, D, D, D, D, D, D, D, D],
-            10: [D, D, D, D, D, D, D, D, H, H],
-            9:  [H, D, D, D, D, H, H, H, H, H],
+            20: [S, S, S, S, S, S, S, S, S, S], 19: [S, S, S, S, S, S, S, S, S, S],
+            18: [S, S, S, S, S, S, S, S, S, S], 17: [S, S, S, S, S, S, S, S, S, S],
+            16: [S, S, S, S, S, H, H, R, R, R], 15: [S, S, S, S, S, H, H, H, R, H],
+            14: [S, S, S, S, S, H, H, H, H, H], 13: [S, S, S, S, S, H, H, H, H, H],
+            12: [H, H, S, S, S, H, H, H, H, H], 11: [D, D, D, D, D, D, D, D, D, D],
+            10: [D, D, D, D, D, D, D, D, H, H], 9:  [H, D, D, D, D, H, H, H, H, H],
             8:  [H, H, H, H, H, H, H, H, H, H],
         };
         const softTotals = {
         //   2  3  4  5  6  7  8  9  10 A
-            20: [S, S, S, S, S, S, S, S, S, S], // A,9
-            19: [S, S, S, S, D, S, S, S, S, S], // A,8
-            18: [D, D, D, D, D, S, S, H, H, H], // A,7
-            17: [H, D, D, D, D, H, H, H, H, H], // A,6
-            16: [H, H, D, D, D, H, H, H, H, H], // A,5
-            15: [H, H, D, D, D, H, H, H, H, H], // A,4
-            14: [H, H, H, D, D, H, H, H, H, H], // A,3
-            13: [H, H, H, D, D, H, H, H, H, H], // A,2
+            20: [S, S, S, S, S, S, S, S, S, S], 19: [S, S, S, S, D, S, S, S, S, S],
+            18: [D, D, D, D, D, S, S, H, H, H], 17: [H, D, D, D, D, H, H, H, H, H],
+            16: [H, H, D, D, D, H, H, H, H, H], 15: [H, H, D, D, D, H, H, H, H, H],
+            14: [H, H, H, D, D, H, H, H, H, H], 13: [H, H, H, D, D, H, H, H, H, H],
         };
         const pairs = {
         //   2  3  4  5  6  7  8  9  10 A
-            'A': [P, P, P, P, P, P, P, P, P, P],
-            '10':[S, S, S, S, S, S, S, S, S, S],
-            '9': [P, P, P, P, P, S, P, P, S, S],
-            '8': [P, P, P, P, P, P, P, P, P, P],
-            '7': [P, P, P, P, P, P, H, H, H, H],
-            '6': [P, P, P, P, P, H, H, H, H, H],
-            '5': [D, D, D, D, D, D, D, D, H, H],
-            '4': [H, H, H, P, P, H, H, H, H, H],
-            '3': [P, P, P, P, P, P, H, H, H, H],
-            '2': [P, P, P, P, P, P, H, H, H, H],
+            'A': [P, P, P, P, P, P, P, P, P, P], '10':[S, S, S, S, S, S, S, S, S, S],
+            '9': [P, P, P, P, P, S, P, P, S, S], '8': [P, P, P, P, P, P, P, P, P, P],
+            '7': [P, P, P, P, P, P, H, H, H, H], '6': [P, P, P, P, P, H, H, H, H, H],
+            '5': [D, D, D, D, D, D, D, D, H, H], '4': [H, H, H, P, P, H, H, H, H, H],
+            '3': [P, P, P, P, P, P, H, H, H, H], '2': [P, P, P, P, P, P, H, H, H, H],
         };
 
         function getRecommendedMove(playerHand, dealerUpCard, counter, gameRules) {
             const playerValue = playerHand.getValue();
             const dealerValue = dealerUpCard.value;
             const trueCount = counter.getTrueCount();
-            
-            if (playerValue >= 21) return S; // No move needed if 21 or bust
-
-            // --- Hi-Lo Deviations (Illustrious 18) ---
+            if (playerValue >= 21) return S;
             if (dealerValue === 10 && playerValue === 16 && trueCount >= 0) return S;
             if (dealerValue === 10 && playerValue === 15 && trueCount >= 4) return S;
             if (dealerValue === 9 && playerValue === 16 && trueCount >= 5) return S;
-
-            // --- Basic Strategy Lookup ---
             const dealerIndex = dealerValue === 11 ? 9 : dealerValue - 2;
             let move;
-
             if (playerHand.isPair()) {
                 const cardRank = playerHand.cards[0].rank;
                 move = pairs[cardRank][dealerIndex];
-                if (move === D && playerHand.cards.length > 2) return H; // Can't double after split hit
+                if (move === D && playerHand.cards.length > 2) return H;
             } else if (playerHand.isSoft()) {
                 move = softTotals[playerValue][dealerIndex];
-                 if (move === D && playerHand.cards.length > 2) return H; // Can't double after hit
+                 if (move === D && playerHand.cards.length > 2) return H;
             } else {
-                // Hard totals
                 if (playerValue <= 8) return H;
                 move = hardTotals[playerValue][dealerIndex];
             }
-            
-            // Apply game rules (Surrender, Double)
-            if (move === D && playerHand.cards.length > 2) return H; // Can't double after hit
-            if (move === R && (!gameRules.surrenderAllowed || playerHand.cards.length > 2)) return H; // Can't surrender if not allowed or after a hit
-            
+            if (move === D && playerHand.cards.length > 2) return H;
+            if (move === R && (!gameRules.surrenderAllowed || playerHand.cards.length > 2)) return H;
             return move;
         }
 
-        function shouldTakeInsurance(counter) {
-            return counter.getTrueCount() >= 3;
-        }
+        function shouldTakeInsurance(counter) { return counter.getTrueCount() >= 3; }
 
         function getBetAmount(counter, minBet, maxBet, bankroll) {
             const trueCount = counter.getTrueCount();
-            let betUnits = 1;
-            if (trueCount >= 2) betUnits = Math.floor(trueCount);
+            let betUnits = trueCount >= 2 ? Math.floor(trueCount) : 1;
             const calculatedBet = betUnits * minBet;
             const finalBet = Math.min(calculatedBet, maxBet, bankroll / 4);
             return Math.max(finalBet, minBet);
@@ -363,7 +334,7 @@
             const cardsRemainingSpan = document.getElementById('cards-remaining');
             const cardPickerGrid = document.getElementById('card-picker-grid');
 
-            // 'players' array now represents seats at the table. A seat can be a Player object or null.
+            // 'players' array represents seats at the table. A seat can be a Player object or null.
             let players = [], dealer = new Player('Dealer'), counter, gameState = 'SETUP';
             let currentPlayerIndex = 0, currentHandIndex = 0, dealingQueue = [];
             let gameRules = {};
@@ -372,26 +343,33 @@
             nextHandBtn.addEventListener('click', startNewHand);
             userActionButtons.forEach(button => button.addEventListener('click', e => handleActionButtonClick(e.target.dataset.move)));
             
-            // --- NEW: Event listener for adding players to empty seats ---
+            // Event listener for adding players to empty seats
             playersArea.addEventListener('click', (event) => {
                 if (event.target.classList.contains('add-player-btn')) {
-                    // Only allow adding players between hands
-                    if (gameState !== 'SETTLEMENT' && gameState !== 'BETTING') {
-                        alert("You can only add new players between hands.");
-                        return;
-                    }
                     const seatIndex = parseInt(event.target.dataset.seatIndex, 10);
                     addNewPlayer(seatIndex);
                 }
             });
 
-            // --- NEW: Function to add a player to an empty seat ---
+            // Function to add a player to an empty seat
             function addNewPlayer(seatIndex) {
                 const initialBankroll = parseInt(document.getElementById('initial-bankroll').value, 10) || 1000;
-                // Player ID is based on the seat number for consistency
                 players[seatIndex] = new Player(`Player ${seatIndex + 1}`, initialBankroll);
+
+                // If adding before the deal, place their bet and rebuild the dealing queue
+                if (gameState === 'BETTING') {
+                    const newPlayer = players[seatIndex];
+                    const betAmount = getBetAmount(counter, gameRules.minBet, gameRules.maxBet, newPlayer.bankroll);
+                    newPlayer.bets[0] = betAmount;
+                    newPlayer.bankroll -= betAmount;
+
+                    buildDealingQueue();
+                    
+                    if (dealingQueue.length > 0) {
+                        currentActionText.textContent = dealingQueue[0].message;
+                    }
+                }
                 
-                // Redraw UI to show the new player
                 createPlayerUI();
                 updateUI();
             }
@@ -448,10 +426,16 @@
             }
 
             function handleCardPickerClick(rank) {
+                // If it's the start of the hand, switch state from BETTING to DEALING
+                if (gameState === 'BETTING') {
+                    gameState = 'DEALING';
+                }
+
                 const cardToDeal = new Card('♠', rank);
                 counter.countCard(cardToDeal);
                 if (gameState === 'DEALING') {
                     const dealInfo = dealingQueue.shift();
+                    if (!dealInfo) return; // Safeguard against empty queue
                     const target = dealInfo.isDealer ? dealer : players[dealInfo.playerIndex];
                     target.hands[dealInfo.handIndex || 0].addCard(cardToDeal);
                     processDealingQueue();
@@ -501,13 +485,13 @@
             function startNewHand() {
                 gameState = 'BETTING';
                 nextHandBtn.style.display = 'none'; insurancePrompt.style.display = 'none';
-                players.forEach(p => { if (p) p.reset(); }); // MODIFIED: Check for null player
+                players.forEach(p => { if (p) p.reset(); });
                 dealer.reset();
                 createPlayerUI();
                 recommendationText.textContent = '---';
 
                 players.forEach((p, i) => { 
-                    if (!p) return; // MODIFIED: Skip empty seats
+                    if (!p) return;
                     const betAmount = getBetAmount(counter, gameRules.minBet, gameRules.maxBet, p.bankroll);
                     p.bets[0] = betAmount; 
                     p.bankroll -= betAmount;
@@ -524,7 +508,6 @@
 
             function buildDealingQueue() {
                 dealingQueue = [];
-                // MODIFIED: Loop checks for null players before adding to queue
                 players.forEach((p, i) => { if (p) dealingQueue.push({ playerIndex: i, handIndex: 0, message: `Deal first card to Player ${i + 1}` }); });
                 dealingQueue.push({ isDealer: true, message: `Deal dealer's UP card` });
                 players.forEach((p, i) => { if (p) dealingQueue.push({ playerIndex: i, handIndex: 0, message: `Deal second card to Player ${i + 1}` }); });
@@ -532,10 +515,12 @@
 
             function processDealingQueue() {
                 if (dealingQueue.length > 0) {
-                    gameState = 'DEALING';
+                    // gameState = 'DEALING'; // REMOVED: State will now change on the first card deal.
                     currentActionText.textContent = dealingQueue[0].message;
                     updateUI();
-                } else { postDealCheck(); }
+                } else { 
+                    postDealCheck(); 
+                }
             }
 
             function postDealCheck() {
@@ -548,7 +533,7 @@
             }
 
             function startPlayerTurn() {
-                // MODIFIED: Skip over empty seats to find the next active player.
+                // Skip over empty seats to find the next active player.
                 while(currentPlayerIndex < players.length && !players[currentPlayerIndex]) {
                     currentPlayerIndex++;
                 }
@@ -564,7 +549,7 @@
                 if(!hand || hand.status !== 'active') { advanceTurn(); return; }
                 
                 if (hand.cards.length === 1) { 
-                    currentActionText.textContent = `Player ${currentPlayerIndex + 1}, Hand ${currentHandIndex + 1}: Please deal a card.`;
+                    currentActionText.textContent = `Player ${player.id}, Hand ${currentHandIndex + 1}: Please deal a card.`;
                     return;
                 }
                 
@@ -576,7 +561,7 @@
                 
                 const move = getRecommendedMove(hand, dealer.hands[0].cards[0], counter, gameRules);
                 recommendationText.textContent = `AI recommends: ${move}`;
-                currentActionText.textContent = `Player ${currentPlayerIndex + 1}, Hand ${currentHandIndex + 1}: Waiting for user action.`;
+                currentActionText.textContent = `Player ${player.id}, Hand ${currentHandIndex + 1}: Waiting for user action.`;
             }
             
             function advanceTurn() {
@@ -630,7 +615,7 @@
                 const dealerValue = dealerHand.isBust() ? 0 : dealerHand.getValue();
                 
                 players.forEach((player, index) => {
-                    if (!player) return; // MODIFIED: Skip empty seats
+                    if (!player) return;
 
                     let totalPayout = 0;
                     player.hands.forEach((hand, hIndex) => {
@@ -644,7 +629,7 @@
                     });
                     player.bankroll += totalPayout;
 
-                    // --- NEW: If player bankroll is 0, remove them from the seat ---
+                    // If player bankroll is 0, remove them from the seat
                     if (player.bankroll <= 0) {
                         console.log(`Player ${player.id} has busted out.`);
                         players[index] = null; // Set the seat to empty
@@ -654,12 +639,12 @@
                 currentActionText.textContent = 'Bets settled. Empty seats are now open.';
                 nextHandBtn.style.display = 'inline-block';
                 
-                // MODIFIED: Rebuild player UI to show empty seats, then update data for remaining players
+                // Rebuild player UI to show empty seats, then update data for remaining players
                 createPlayerUI();
                 updateUI();
             }
             
-            // MODIFIED: Now handles creating player cards AND empty seat cards.
+            // Handles creating player cards AND empty seat cards.
             function createPlayerUI() {
                 playersArea.innerHTML = '';
                 players.forEach((player, index) => {
@@ -667,7 +652,7 @@
                     playerDiv.className = 'player-card';
 
                     if (player) {
-                        playerDiv.id = `player-${player.id.replace(' ', '-')}`;
+                        playerDiv.id = `player-${player.id.replace(/ /g, '-')}`;
                         playerDiv.innerHTML = `<h3>${player.id}</h3><div class="player-bet-recommendation"></div><div class="player-hands-container"></div><p>Bankroll: <span class="player-bankroll">${Math.round(player.bankroll)}</span></p>`;
                     } else {
                         playerDiv.classList.add('empty-seat');
@@ -681,15 +666,14 @@
                 });
             }
 
-
             function updateUI() {
                 updateInfo();
                 document.getElementById('dealer-value').textContent = dealer.hands[0].getValue();
                 document.querySelector('#dealer-area #dealer-cards').innerHTML = dealer.hands[0].cards.map(c => `<span class="card">${c.rank}</span>`).join(' ');
                 
                 players.forEach((player, pIndex) => {
-                    if (!player) return; // MODIFIED: Skip empty seats
-                    const playerDiv = document.getElementById(`player-${player.id.replace(' ', '-')}`);
+                    if (!player) return;
+                    const playerDiv = document.getElementById(`player-${player.id.replace(/ /g, '-')}`);
                     if (!playerDiv) return;
                     playerDiv.classList.toggle('active-player', pIndex === currentPlayerIndex && (gameState === 'PLAYER_TURN' || gameState === 'DEALING'));
                     playerDiv.querySelector('.player-bankroll').textContent = Math.round(player.bankroll);
