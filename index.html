@@ -14,7 +14,7 @@
         .game-column { display: flex; flex-direction: column; gap: 20px; }
 
         /* Component Styles */
-        #dealer-area, .player-card, #game-info, #input-controls, #ai-recommendation, #user-actions, .donation-section, #setup-screen {
+        #dealer-area, .player-card, #game-info, #input-controls, #ai-recommendation, #user-actions, #setup-screen {
             border: 1px solid #334b46; padding: 15px; border-radius: 8px; background-color: #2c3e3a;
         }
         #setup-screen { max-width: 500px; margin: 50px auto; display: flex; flex-direction: column; gap: 10px;}
@@ -50,7 +50,6 @@
         
         #insurance-prompt { margin-top: 10px; padding: 10px; background-color: #334b46; border-left: 4px solid #f1c40f; }
         .player-status { font-weight: bold; font-size: 1.1em; color: #f1c40f; }
-        .donation-section { position: fixed; bottom: 10px; right: 10px; max-width: 300px; font-size: 0.8em; }
     </style>
 </head>
 <body>
@@ -81,6 +80,13 @@
         <div class="setup-option">
             <label for="allow-surrender">Allow Surrender:</label>
             <input type="checkbox" id="allow-surrender" checked>
+        </div>
+        <div class="setup-option">
+            <label for="soft-17-rule">Dealer on Soft 17:</label>
+            <select id="soft-17-rule">
+                <option value="stand" selected>Stands (S17)</option>
+                <option value="hit">Hits (H17)</option>
+            </select>
         </div>
         <button id="start-game-btn">Start Game</button>
     </div>
@@ -134,12 +140,6 @@
         </div>
     </div>
 
-    <div class="donation-section">
-        <h3>Support This Tool</h3>
-        <p>If you find this solver useful, consider a donation.</p>
-        <p><strong>Bitcoin (BTC):</strong> bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh</p>
-    </div>
-
     <script type="module">
         // ========================================================================
         // CORE GAME LOGIC
@@ -175,8 +175,8 @@
             isPair() { return this.cards.length === 2 && this.cards[0].rank === this.cards[1].rank; }
             isSoft() {
                 const valueWithAceAs11 = this.cards.reduce((s, c) => s + c.value, 0);
-                const valueWithAceAs1 = this.cards.map(c => c.rank === 'A' ? 1 : c.value).reduce((s, v) => s + v, 0);
-                return this.cards.some(c => c.rank === 'A') && valueWithAceAs11 !== valueWithAceAs1;
+                const hasAce = this.cards.some(c => c.rank === 'A');
+                return hasAce && valueWithAceAs11 > this.getValue();
             }
         }
 
@@ -351,8 +351,14 @@
                 const maxBetInput = document.getElementById('max-bet').value;
                 const maxBet = maxBetInput ? parseInt(maxBetInput, 10) : Infinity;
                 const surrenderAllowed = document.getElementById('allow-surrender').checked;
+                const soft17Rule = document.getElementById('soft-17-rule').value;
                 
-                gameRules = { minBet, maxBet, surrenderAllowed };
+                gameRules = { 
+                    minBet, 
+                    maxBet, 
+                    surrenderAllowed, 
+                    dealerHitsOnSoft17: soft17Rule === 'hit' 
+                };
 
                 counter = new HiLoCounter(numDecks);
                 players = Array.from({ length: numPlayers }, (_, i) => new Player(`Player ${i + 1}`, initialBankroll));
@@ -518,11 +524,27 @@
                 if (dealer.hands[0].cards.length === 1) {
                     currentActionText.textContent = `All players finished. Deal dealer's hole card.`;
                 } else {
-                    if (dealer.hands[0].isBlackjack()) {
+                    const dealerHand = dealer.hands[0];
+                    const dealerValue = dealerHand.getValue();
+
+                    // Determine if the dealer should stand based on the game rules
+                    let dealerStands = false;
+                    if (dealerValue > 17) {
+                        dealerStands = true;
+                    } else if (dealerValue === 17) {
+                        // If it's a hard 17, dealer always stands.
+                        // If it's a soft 17, it depends on the game rule.
+                        if (!dealerHand.isSoft() || (dealerHand.isSoft() && !gameRules.dealerHitsOnSoft17)) {
+                             dealerStands = true;
+                        }
+                    }
+                    // Dealer never stands on 16 or less.
+
+                    if (dealerHand.isBlackjack()) {
                         currentActionText.textContent = `Dealer has Blackjack.`;
                         settleBets();
-                    } else if (dealer.hands[0].getValue() >= 17) {
-                        currentActionText.textContent = `Dealer stands with ${dealer.hands[0].getValue()}.`;
+                    } else if (dealerStands) {
+                        currentActionText.textContent = `Dealer stands with ${dealerValue}.`;
                         settleBets();
                     } else {
                         currentActionText.textContent = `Dealer hits. Input next dealer card.`;
