@@ -22,7 +22,7 @@ Flexible Multi-Hand & Split Handling: Accurately handles complex scenarios, allo
 
 Insurance Guidance: When the dealer shows an Ace, the application will display a clear on-screen message advising whether or not to take insurance based on the current true count.
 
-Dynamic Player Seats: Simulate a real table experience. If a player's bankroll is depleted after a hand, their seat will become empty. A new player can then join the game by being added to that open spot before the next hand begins.
+Dynamic Player Seats: Simulate a real table experience. If a player's bankroll is depleted after a hand, or if he leaves the table between two hands, their seat will become empty. A new player can then join the game by being added to that open spot before the next hand begins.
 
 Manual Card Input: You are in complete control. You tell the program which cards are dealt, making it a perfect tool for practicing with a real deck.
 
