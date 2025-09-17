@@ -296,25 +296,98 @@
             const playerValue = playerHand.getValue();
             const dealerValue = dealerUpCard.value;
             const trueCount = counter.getTrueCount();
+
+            // Early exit for completed hands
             if (playerValue >= 21) return S;
-            if (dealerValue === 10 && playerValue === 16 && trueCount >= 0) return S;
-            if (dealerValue === 10 && playerValue === 15 && trueCount >= 4) return S;
-            if (dealerValue === 9 && playerValue === 16 && trueCount >= 5) return S;
+
+            // ==============================================================
+            // START: Illustrious 18 & Fab 4 Deviations Implementation
+            // ==============================================================
+            // These checks override basic strategy based on the true count.
+
+            // I18 #1: Take Insurance at TC >= +3
+            // This is handled by the separate shouldTakeInsurance() function.
+
+            // --- STANDING DEVIATIONS (Instead of Hitting) ---
+            // #2: Player 16 vs. Dealer 10, when TC >= 0
+            if (!playerHand.isPair() && playerValue === 16 && dealerValue === 10 && trueCount >= 0) return S;
+            // #3: Player 15 vs. Dealer 10, when TC >= +4
+            if (playerValue === 15 && dealerValue === 10 && trueCount >= 4) return S;
+            // #7: Player 12 vs. Dealer 3, when TC >= +2
+            if (playerValue === 12 && dealerValue === 3 && trueCount >= 2) return S;
+            // #8: Player 12 vs. Dealer 2, when TC >= +3
+            if (playerValue === 12 && dealerValue === 2 && trueCount >= 3) return S;
+            // #13: Player 16 vs. Dealer 9, when TC >= +5
+            if (!playerHand.isPair() && playerValue === 16 && dealerValue === 9 && trueCount >= 5) return S;
+            // #14: Player 13 vs. Dealer 2, when TC <= -1
+            if (playerValue === 13 && dealerValue === 2 && trueCount <= -1) return S;
+            // #15: Player 12 vs. Dealer 4, when TC <= 0
+            if (playerValue === 12 && dealerValue === 4 && trueCount <= 0) return S;
+            // #16: Player 12 vs. Dealer 5, when TC <= -2
+            if (playerValue === 12 && dealerValue === 5 && trueCount <= -2) return S;
+            // #17: Player 12 vs. Dealer 6, when TC <= -1
+            if (playerValue === 12 && dealerValue === 6 && trueCount <= -1) return S;
+            // #18: Player 13 vs. Dealer 3, when TC <= -2
+            if (playerValue === 13 && dealerValue === 3 && trueCount <= -2) return S;
+
+            // --- DOUBLING DEVIATIONS (Instead of Hitting) ---
+            // #6: Player 10 vs. Dealer 10, when TC >= +4
+            if (playerValue === 10 && dealerValue === 10 && trueCount >= 4) return D;
+            // #9: Player 11 vs. Dealer A, when TC >= +1
+            if (playerValue === 11 && dealerValue === 11 && trueCount >= 1) return D;
+            // #10: Player 9 vs. Dealer 2, when TC >= +1
+            if (playerValue === 9 && dealerValue === 2 && trueCount >= 1) return D;
+            // #11: Player 10 vs. Dealer A, when TC >= +4
+            if (playerValue === 10 && dealerValue === 11 && trueCount >= 4) return D;
+            // #12: Player 9 vs. Dealer 7, when TC >= +3
+            if (playerValue === 9 && dealerValue === 7 && trueCount >= 3) return D;
+
+            // --- SPLITTING DEVIATIONS (Instead of Standing) ---
+            // #4: Player 10,10 vs. Dealer 5, when TC >= +5
+            if (playerHand.isPair() && playerHand.cards[0].value === 10 && dealerValue === 5 && trueCount >= 5) return P;
+            // #5: Player 10,10 vs. Dealer 6, when TC >= +4
+            if (playerHand.isPair() && playerHand.cards[0].value === 10 && dealerValue === 6 && trueCount >= 4) return P;
+
+            // --- "FAB 4" SURRENDER DEVIATIONS ---
+            // These apply only if surrender is allowed and it's the first action on a two-card hand.
+            if (gameRules.surrenderAllowed && playerHand.cards.length === 2) {
+                // Fab 1: Player 14 vs. Dealer 10, TC >= +3
+                if (playerValue === 14 && dealerValue === 10 && trueCount >= 3) return R;
+                // Fab 2 & 3: Player 15 vs. Dealer 10. The basic strategy is to Surrender. I18#3 tells us to STAND if TC>=+4. So, the surrender is correct if TC is <+4. The code handles this by first checking I18#3 above. If that condition isn't met, it will fall through to the basic strategy chart which correctly recommends R.
+                // Fab 4: Player 15 vs. Dealer 9, TC >= +2
+                if (playerValue === 15 && dealerValue === 9 && trueCount >= 2) return R;
+                // Additional common one: Player 15 vs. Dealer A, TC >= +1
+                if (playerValue === 15 && dealerValue === 11 && trueCount >= 1) return R;
+            }
+            // ==============================================================
+            // END: Illustrious 18 & Fab 4 Deviations Implementation
+            // ==============================================================
+
+            // Fallback to Basic Strategy Tables if no deviation applies
             const dealerIndex = dealerValue === 11 ? 9 : dealerValue - 2;
             let move;
+
             if (playerHand.isPair()) {
                 const cardRank = playerHand.cards[0].rank;
                 move = pairs[cardRank][dealerIndex];
-                if (move === D && playerHand.cards.length > 2) return H;
             } else if (playerHand.isSoft()) {
-                move = softTotals[playerValue][dealerIndex];
-                 if (move === D && playerHand.cards.length > 2) return H;
-            } else {
+                // Handle cases where soft total is not in the table (e.g., A-A-7 -> soft 19)
+                if (softTotals[playerValue]) {
+                    move = softTotals[playerValue][dealerIndex];
+                } else {
+                    // If no specific soft total, treat as hard total
+                    move = hardTotals[playerValue][dealerIndex];
+                }
+            } else { // Hard totals
                 if (playerValue <= 8) return H;
                 move = hardTotals[playerValue][dealerIndex];
             }
+
+            // Post-decision rule checks (e.g., can't double on 3+ cards)
             if (move === D && playerHand.cards.length > 2) return H;
+            if (move === P && playerHand.cards[0].value !== playerHand.cards[1].value) return H; // Failsafe for non-pairs
             if (move === R && (!gameRules.surrenderAllowed || playerHand.cards.length > 2)) return H;
+
             return move;
         }
 
